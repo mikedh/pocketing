@@ -4,7 +4,7 @@ import os
 from setuptools import setup
 
 # load __version__
-version_file = 'trimesh/version.py'
+version_file = 'pocketing/version.py'
 exec(open(version_file).read())
 
 # load README.md as long_description
