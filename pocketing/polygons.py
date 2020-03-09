@@ -15,7 +15,6 @@ from scipy import spatial
 from shapely.geometry import Polygon
 
 
-
 def hash(polygon):
     """
     Get a hash of a polygon
@@ -177,4 +176,3 @@ def interpolate(a, b, start=None, step=.005):
     points = (ra * (1.0 - weights)) + (pb * weights)
 
     return points
-

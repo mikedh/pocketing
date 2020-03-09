@@ -13,10 +13,11 @@ import networkx as nx
 
 from scipy import spatial
 
+
 def traverse_child_first(g, closest=None):
     """
     Traverse a tree, with the rule that a node can only be visted
-    once all of its children are visited. 
+    once all of its children are visited.
 
     Useful for linking toolpaths.
 
@@ -190,4 +191,3 @@ def is_1D_graph(g):
 
     # made it through all checks
     return True
-

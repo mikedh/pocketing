@@ -17,6 +17,7 @@ from shapely.geometry import Polygon
 from . import graph
 from . import polygons
 
+
 def offset_spiral(polygon, step):
     """
     Create a spiral inside a polygon by offsetting the
@@ -80,7 +81,7 @@ def contour_parallel(polygon, step):
     Create a linked contour parallel milling strategy.
     """
     g, offsets = polygons.offset_graph(polygon,
-                                      distance=step)
+                                       distance=step)
     traversal = graph.traverse_child_first(g,
                                            polygons.closest_node)
     paths = graph.graph_to_paths(g,
@@ -88,4 +89,3 @@ def contour_parallel(polygon, step):
                                  offsets)
 
     return paths
-

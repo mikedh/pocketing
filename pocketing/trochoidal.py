@@ -57,7 +57,7 @@ import time
 import numpy as np
 import networkx as nx
 
-from shapely.geometry import LineString, Polygon
+from shapely.geometry import LineString, Polygon, Point
 from trimesh.constants import log
 from collections import deque
 from scipy.interpolate import UnivariateSpline, interp1d
@@ -105,20 +105,27 @@ def traversal(polygon, min_radius=.06):
     slow: (n,2) float, traversal of nodes that have never been seen before
     fast: (n,2) float, traversal of previously visited nodes
     """
-    resolution = np.diff(np.reshape(polygon.bounds,
-                                    (2, 2)), axis=0).max() / 200.0
-    medial = trimesh.path.polygons.medial_axis(polygon,
-                                               resolution=resolution).process()
+    resolution = np.diff(np.reshape(
+        polygon.bounds, (2, 2)), axis=0).max() / 200.0
+    #from IPython import embed
+    # embed()
+    medial_e, medial_v = trimesh.path.polygons.medial_axis(
+        polygon,
+        resolution=resolution)
 
-    inverse = trimesh.path.polygons.InversePolygon(polygon)
-    medial_radii = np.array([inverse.distance(p) for p in medial.vertices])
+    medial = trimesh.path.Path2D(
+        **trimesh.path.exchange.misc.edges_to_path(
+            medial_e, medial_v))
+
+    inverse = polygon.boundary
+    medial_radii = np.array([inverse.distance(Point(p)) for p in medial_v])
     g = medial.vertex_graph
 
     bad = np.nonzero(medial_radii < min_radius)[0]
     g.remove_nodes_from(bad)
 
     start = query_nearest(medial.vertices,
-                                   polygon.centroid.coords)
+                          polygon.centroid.coords)
     current = deque([start])
     paths = deque()
     fast = deque()
@@ -164,10 +171,10 @@ def advancing_front(path, polygon, step):
 
     distance_initial = np.arange(
         0.0, sampler.length + (path_step / 2.0), path_step)
-    inverse = trimesh.path.polygons.InversePolygon(polygon)
 
+    inverse = polygon.boundary
     offset = sampler.sample(distance_initial)
-    radius = np.array([inverse.distance(i) for i in offset])
+    radius = np.array([inverse.distance(Point(i)) for i in offset])
 
     pairs = deque([(offset[0], radius[0])])
 
@@ -232,7 +239,7 @@ def swept_trochoid(path,
                            len(distances) * counts_per_rotation)
 
     sampler = trimesh.path.traversal.PathSample(path)
-    inverse = trimesh.path.polygons.InversePolygon(polygon)
+    inverse = polygon.boundary
 
     new_distance = interpolator(x_interp)
     new_distance = np.hstack((np.tile(new_distance[0],
@@ -245,13 +252,13 @@ def swept_trochoid(path,
                             np.pi * 2 * len(distances) + np.pi * 2,
                             len(new_distance))
 
-    new_radius = np.array([inverse.distance(i) for i in new_offset])
+    new_radius = np.array([inverse.distance(Point(i)) for i in new_offset])
 
     # calculate the actual trochoid
     curve = trochoid(theta=new_theta,
                      radius=new_radius,
                      offset=new_offset)
-    
+
     # find the indexes where curve intersects the input path
     #hits = intersection_index(curve, path)
     # so that the result both starts and ends on the input path
@@ -259,7 +266,6 @@ def swept_trochoid(path,
     ##############curve = curve[hits.min()+1:hits.max()]
 
     return curve
-
 
 
 def query_nearest(points_original, points_query):
@@ -308,7 +314,7 @@ def toolpath(polygon,
 
     Parameters
     --------------
-    polygon : shapely.geometry.Polygon 
+    polygon : shapely.geometry.Polygon
       Closed region to fill with tool path
     step : float
       Distance to step over between cuts
@@ -324,23 +330,28 @@ def toolpath(polygon,
 
     # if not specified set to fraction of stepover
     if min_radius is None:
-        min_radius =  step / 2.0
+        min_radius = step / 2.0
 
     # resolution for medial axis calculation
     resolution = np.diff(np.reshape(polygon.bounds,
                                     (2, 2)), axis=0).max() / 500.0
-    # the skeleton of a region 
-    medial = trimesh.path.polygons.medial_axis(
-        polygon, resolution=resolution).process()
+    # the skeleton of a region
+    medial_e, medial_v = trimesh.path.polygons.medial_axis(
+        polygon,
+        resolution=resolution)
+    medial = trimesh.path.Path2D(
+        **trimesh.path.exchange.misc.edges_to_path(
+            medial_e, medial_v))
 
-    inverse = trimesh.path.polygons.InversePolygon(polygon)
-    medial_radii = np.array([inverse.distance(p)
+    inverse = polygon.boundary
+    medial_radii = np.array([inverse.distance(Point(p))
                              for p in medial.vertices])
     g = medial.vertex_graph
 
     bad = np.nonzero(medial_radii < min_radius)[0]
     g.remove_nodes_from(bad)
 
+    # start from the medial vertex closest to the centroid
     start = query_nearest(medial.vertices,
                           polygon.centroid.coords)[0]
     current = deque([start])
@@ -352,17 +363,15 @@ def toolpath(polygon,
         # check to see if we have jumped a
         if current[-1] != edge[0]:
             """
-            Case where we have jumped between two nodes which 
+            Case where we have jumped between two nodes which
             aren't connected.
             """
             jump = nx.shortest_path(g, current[-1], edge[1])
             jump_length = LineString(medial.vertices[jump]).length
-
             radii = medial_radii[[current[-1], edge[1]]]
-
             jump_ratio = jump_length / radii.max()
 
-            if jump_ratio > 3.0:
+            if jump_ratio > 1.0:
                 fast.append(jump)
                 slow.append(np.array(current))
                 current = deque([edge[0]])
@@ -376,6 +385,7 @@ def toolpath(polygon,
         path.extend(swept_trochoid(path=vertices,
                                    polygon=polygon,
                                    step=step))
+
         if index < len(fast):
             path.extend(medial.vertices[fast[index]])
 

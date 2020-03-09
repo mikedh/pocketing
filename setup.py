@@ -14,7 +14,7 @@ if os.path.exists('README.md'):
         long_description = f.read()
 
 # call the magical setuptools setup
-setup(name='pypocketing',
+setup(name='pocketing',
       version=__version__,
       description='Generate 2D toolpaths from polygons',
       long_description=long_description,
@@ -22,7 +22,7 @@ setup(name='pypocketing',
       author='Michael Dawson-Haggerty',
       author_email='mikedh@kerfed.com',
       license='MIT',
-      url='http://github.com/mikedh/pypocketing',
+      url='http://github.com/mikedh/pocketing',
       keywords='graphics mesh geometry 3D',
       classifiers=[
           'Development Status :: 3 - Alpha',

@@ -2,7 +2,7 @@
 raster.py
 ---------------
 
-Collision check tool paths and evaluate chip loading using 
+Collision check tool paths and evaluate chip loading using
 rasterized tests.
 """
 import zlib
@@ -13,19 +13,17 @@ import numpy as np
 import networkx as nx
 
 from PIL import Image, ImageDraw
-    
+
 from scipy import spatial
 from shapely.geometry import Polygon
 
 
-
-def check_loading(polygon, paths):
+def check_loading(polygon, paths, pixel_count=1e6):
     """
-    Check the chip loading of 2D tool paths. 
+    Check the chip loading of 2D tool paths.
 
     NOT FUNCTIONAL
     """
-
 
     resolution_final = np.array([1920, 1080]) * 2
     resolution_multiplier = 4
@@ -49,7 +47,6 @@ def check_loading(polygon, paths):
         pix = ((i * space_to_pixel) - space_offset).astype(int)
         draw.line([tuple(i) for i in pix], fill=(
             255, 0, 0), width=resolution_multiplier * 2)
-
 
     i = im.resize(resolution_final, resample=Image.LANCZOS)
     i.save('hi.png')
