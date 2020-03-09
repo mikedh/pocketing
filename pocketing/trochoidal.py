@@ -2,68 +2,77 @@
 trochoidal.py
 ------------------
 
-Generate troichoidal toolpaths, or a bunch of tiny little circles. Generally used for high speed milling.
+Generate troichoidal toolpaths, or a bunch of tiny little circles.
+Generally used for high speed milling.
 
 
 
-Trochoid Algorithm
-----------
-Input:    Polygon
-Outputs: (n) sequence of the following tuple:
-            start_position: (2,) float, position in space where cut section starts
-            start_radius:   float,      radius inital position should be cleared out to
-            path:           (n,2) float, cartesian path that represents a smooth trochoid- like curve
-                                         that has the following properties:
-                                          1) fully inside the input polygon
-                                          2) starts and ends on the medial axis of the polygon
-                                          3) has relatively uniform stepover between cycles of the trochoid
-                                          4) terminates if the trochoids pass below a minimum radius
+# Trochoid Algorithm
+
+Parameters
+---------------
+polygon : shapely.geometry.Polygon
+  Region to generate toolpath inside
+
+Returns
+------------
+
+start_position: (2,) float, position in space where cut section starts
+start_radius:   float,      radius inital position should be cleared out to
+path:           (n,2) float, cartesian path that represents a smooth trochoid- like curve
+                            that has the following properties:
+                            1) fully inside the input polygon
+                            2) starts and ends on the medial axis of the polygon
+                            3) has relatively uniform stepover between cycles of the trochoid
+                            4) terminates if the trochoids pass below a minimum radius
 
 
 Algorithm
 ---------------
-           1) Compute the medial axis of the polygon
+1) Compute the medial axis of the polygon
 
-           2) Generate a traversal of the medial axis with DFS
-              a) Note when connections between non- connected nodes are made
-              b) For parts of the traversal along edges, add them to a 'slow' group
-              b) For jumps in the traversal, compute a shortest path connecting the jump, then:
-                 i)  if the shortest path is below a threshold*, add this path to the 'slow group
-                 ii) if the shortest path is above the threshold*, add it to the 'fast' group
-                 *)  this threshold can be a fixed value, a fraction of the radius at the start or end point,
+2) Generate a traversal of the medial axis with DFS
+    a) Note when connections between non- connected nodes are made
+    b) For parts of the traversal along edges, add them to a 'slow' group
+    b) For jumps in the traversal, compute a shortest path connecting the jump, then:
+        i)  if the shortest path is below a threshold*, add this path to the 'slow group
+        ii) if the shortest path is above the threshold*, add it to the 'fast' group
+        *)  this threshold can be a fixed value, a fraction of the radius at the start or end point,
                      or something else entirely
 
-           3) For each section of the traversal with no jumps ('slow' group), compute the trochoid like curve:
-              a) Discretize the path section with linearly increasing path distances
-              b) compute the largest radius a circle at each point can be and still be contained by the polygon
-              c) find the subset of circles which have advancing fronts:
+3) For each section of the traversal with no jumps ('slow' group), compute the trochoid like curve:
+    a) Discretize the path section with linearly increasing path distances
+    b) compute the largest radius a circle at each point can be and still be contained by the polygon
+    c) find the subset of circles which have advancing fronts:
                  circles centered at p1/p2 with radius r1/r2, step = |p2-p1| - r1 + r2
-              d) find the distance along the section of the path for each of the subset of circles
-              e) Fit a smoothed function (aka cubic spline) to the distances along the path
-              f) Sample the smoothed function for the new distances along the path
-              g) Take the distances, and convert them to XY positions
-              h) Find the new radius at each of the XY positions
-              i) Set theta equal to a linearly increasing value between 0.0 and (len(circle subset) * pi * 2.0)
-              j) Compute a trochoid with the XY positions, radii, and theta
+    d) find the distance along the section of the path for each of the subset of circles
+    e) Fit a smoothed function (aka cubic spline) to the distances along the path
+    f) Sample the smoothed function for the new distances along the path
+    g) Take the distances, and convert them to XY positions
+    h) Find the new radius at each of the XY positions
+        i) Set theta equal to a linearly increasing value between
+           0.0 and (len(circle subset) * pi * 2.0)
+        j) Compute a trochoid with the XY positions, radii, and theta
 
-           4) For each section of the traversal which represents a jump ('fast' group), connect to the trochoid on both ends
-           5) Calculate the 'chip loading', or material area removed per unit distance
-           6) For regions of the traversal with no chip loading, shortcut the path
-           7) Smooth the path
-           8) Generate velocities as a function of chip loading
+4) For each section of the traversal which represents a jump ('fast' group),
+   connect to the trochoid on both ends
+5) Calculate the 'chip loading', or material area removed per unit distance
+6) For regions of the traversal with no chip loading, shortcut the path
+7) Generate velocities as a function of chip loading
 """
 
 import time
+import trimesh
 import numpy as np
 import networkx as nx
 
-from shapely.geometry import LineString, Polygon, Point
+from .polygons import boundary_distance
+
+from shapely.geometry import LineString, Polygon, MultiPoint
 from trimesh.constants import log
 from collections import deque
 from scipy.interpolate import UnivariateSpline, interp1d
 from scipy import spatial
-
-import trimesh
 
 
 def trochoid(offset, theta, radius):
@@ -102,8 +111,10 @@ def traversal(polygon, min_radius=.06):
 
     Returns
     ------------
-    slow: (n,2) float, traversal of nodes that have never been seen before
-    fast: (n,2) float, traversal of previously visited nodes
+    slow : (n, 2) float
+      Traversal of nodes that have never been seen before
+    fast : (n, 2) float
+      Traversal of previously visited nodes
     """
     resolution = np.diff(np.reshape(
         polygon.bounds, (2, 2)), axis=0).max() / 200.0
@@ -117,17 +128,17 @@ def traversal(polygon, min_radius=.06):
         **trimesh.path.exchange.misc.edges_to_path(
             medial_e, medial_v))
 
-    inverse = polygon.boundary
-    medial_radii = np.array([inverse.distance(Point(p)) for p in medial_v])
+    medial_radii = boundary_distance(polygon=polygon, points=medial_v)
+
     g = medial.vertex_graph
 
     bad = np.nonzero(medial_radii < min_radius)[0]
     g.remove_nodes_from(bad)
 
-    start = query_nearest(medial.vertices,
-                          polygon.centroid.coords)
+    start = query_nearest(
+        medial.vertices, polygon.centroid.coords)
     current = deque([start])
-    paths = deque()
+    slow = deque()
     fast = deque()
 
     for e in nx.dfs_edges(g, start):
@@ -135,12 +146,12 @@ def traversal(polygon, min_radius=.06):
             closest = current[-1]
             shortest = nx.shortest_path(g, closest, e[0])
             fast.append(shortest)
-            paths.append(np.array(current))
+            slow.append(np.array(current))
             current = deque([e[0]])
         current.append(e[1])
-    paths.append(current)
+    slow.append(current)
 
-    slow = [medial.vertices[i] for i in paths]
+    slow = [medial.vertices[i] for i in slow]
     fast = [medial.vertices[i] for i in fast]
     return slow, fast
 
@@ -172,9 +183,8 @@ def advancing_front(path, polygon, step):
     distance_initial = np.arange(
         0.0, sampler.length + (path_step / 2.0), path_step)
 
-    inverse = polygon.boundary
     offset = sampler.sample(distance_initial)
-    radius = np.array([inverse.distance(Point(i)) for i in offset])
+    radius = boundary_distance(polygon=polygon, points=offset)
 
     pairs = deque([(offset[0], radius[0])])
 
@@ -239,7 +249,6 @@ def swept_trochoid(path,
                            len(distances) * counts_per_rotation)
 
     sampler = trimesh.path.traversal.PathSample(path)
-    inverse = polygon.boundary
 
     new_distance = interpolator(x_interp)
     new_distance = np.hstack((np.tile(new_distance[0],
@@ -252,7 +261,10 @@ def swept_trochoid(path,
                             np.pi * 2 * len(distances) + np.pi * 2,
                             len(new_distance))
 
-    new_radius = np.array([inverse.distance(Point(i)) for i in new_offset])
+    new_radius = boundary_distance(polygon=polygon, points=new_offset)
+
+    #from IPython import embed
+    # embed()
 
     # calculate the actual trochoid
     curve = trochoid(theta=new_theta,
@@ -343,9 +355,9 @@ def toolpath(polygon,
         **trimesh.path.exchange.misc.edges_to_path(
             medial_e, medial_v))
 
-    inverse = polygon.boundary
-    medial_radii = np.array([inverse.distance(Point(p))
-                             for p in medial.vertices])
+    medial_radii = boundary_distance(polygon=polygon,
+                                     points=medial_v)
+
     g = medial.vertex_graph
 
     bad = np.nonzero(medial_radii < min_radius)[0]

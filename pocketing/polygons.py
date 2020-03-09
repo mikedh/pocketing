@@ -33,6 +33,37 @@ def hash(polygon):
     return crc
 
 
+def boundary_distance(polygon, points):
+    """
+    Find the distance between a polygon's boundary and an array of points.
+
+    Parameters
+    -------------
+    polygon : shapely.geometry.Polygon
+      Polygon to query
+    points : (n, 2) float
+      2D points
+
+    Returns
+    ------------
+    distance : (n,) float
+      Minimum distance from each point to polygon boundary
+    """
+
+    try:
+        import pygeos
+        # the pygeos way is 5-10x faster
+        pg_points = pygeos.points(*points.T)
+        pg_boundary = pygeos.boundary(pygeos.Geometry(polygon.wkt))
+        distance = pygeos.distance(pg_boundary, pg_points)
+    except BaseException:
+        # in pure shapely we have to loop
+        inverse = polygon.boundary
+        distance = np.array([inverse.distance(i) for i in MultiPoint(points)])
+
+    return distance
+
+
 def closest_node(g, node, node_options):
     """
     Find the things.

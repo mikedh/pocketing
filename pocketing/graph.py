@@ -73,18 +73,18 @@ def traverse_child_first(g, closest=None):
 
     assert nx.is_forest(g)
 
-    leaves = [k for k in g.node.keys() if len(g.edges(k)) == 0]
+    leaves = [k for k in g.nodes.keys() if len(g.edges(k)) == 0]
     root = [n for n in g.nodes() if
             len(list(g.predecessors(n))) == 0][0]
 
     # for each node remember names of all leaf nodes below it
     for n in g.nodes():
-        g.node[n]['leaves'] = []
+        g.nodes[n]['leaves'] = []
     for l in leaves:
         for n in nx.shortest_path(g, root, l):
             if n == l:
                 continue
-            g.node[n]['leaves'].append(l)
+            g.nodes[n]['leaves'].append(l)
 
     # start the traversal at an arbitrary node
     traversal = collections.deque([leaves[0]])
@@ -113,7 +113,7 @@ def traverse_child_first(g, closest=None):
                     traversal.append(u)
                 else:
                     # a list of all leaves associated with the unvisited node
-                    c_leaf = g.node[u]['leaves']
+                    c_leaf = g.nodes[u]['leaves']
                     # only append one of them now, and break
                     if closest is None:
                         next_node = c_leaf[0]
@@ -133,7 +133,7 @@ def graph_to_paths(g, traversal, polygons):
     Parameters
 
     """
-    leaves = [k for k in g.node.keys() if len(g.edges(k)) == 0]
+    leaves = [k for k in g.nodes.keys() if len(g.edges(k)) == 0]
 
     paths = collections.deque()
 
