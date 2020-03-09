@@ -1,5 +1,8 @@
 # pypocketing: ALPHA
 
+![Test And Publish](https://github.com/mikedh/pocketing/workflows/Test%20And%20Publish/badge.svg) [![PyPI version](https://badge.fury.io/py/pocketing.svg)](https://badge.fury.io/py/pocketing)
+----------------------
+
 ![ScreenShot](https://raw.github.com/mikedh/pypocketing/master/docs/contour_troch.png)
 
 Fill 2D regions with traversals, useful someday for generating milling tool paths.
