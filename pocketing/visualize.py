@@ -4,13 +4,7 @@ visualize.py
 
 Utilities for visualizing 2D toolpaths
 """
-
-from scipy import spatial
-from shapely.geometry import LineString
-from trimesh.constants import log
-
 import numpy as np
-import trimesh
 
 
 def animate_path(polygon, paths):
@@ -42,19 +36,20 @@ def animate_path(polygon, paths):
 
     fig = plt.figure()
     ax = plt.axes(xlim=bounds[:, 0], ylim=bounds[:, 1])
-    #ax.set_aspect('equal', 'datalim')
-    #line, = ax.plot([], [], lw=2)
-    #circ, = ax.plot([], [], lw=1, color='r')
+    # ax.set_aspect('equal', 'datalim')
+    # line, = ax.plot([], [], lw=2)
+    # circ, = ax.plot([], [], lw=1, color='r')
 
     lines = [ax.plot([], [], lw=2)[0] for i in range(len(paths))]
 
     paths_len = [len(i) for i in paths]
     paths_cs = np.cumsum(paths_len)
 
-    anim = animation.FuncAnimation(fig,
-                                   animate,
-                                   init_func=init,
-                                   frames=paths_cs[-1],
-                                   interval=.25,
-                                   blit=False)
+    animation.FuncAnimation(
+        fig,
+        animate,
+        init_func=init,
+        frames=paths_cs[-1],
+        interval=.25,
+        blit=False)
     plt.show()

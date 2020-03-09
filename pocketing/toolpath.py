@@ -80,12 +80,6 @@ def check_path(polygon, path, radius, resolution=.01):
      grid_points) = trimesh.path.polygons.rasterize_polygon(polygon,
                                                             pitch=resolution)
 
-    inverse = ((np.transpose(
-        np.nonzero(
-            np.logical_not(grid))).astype(np.float64) * resolution) +
-        grid_offset +
-        (resolution / 2.0))
-
     # create a KDtree of pixels inside the polygon
     tree = spatial.cKDTree(grid_points)
 
