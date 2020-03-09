@@ -273,9 +273,10 @@ def intersection_index(curve_a, curve_b):
     return indexes
 
 
-def toolpath(polygon,
-             step,
-             min_radius=None):
+def toolpath(
+        polygon,
+        step,
+        min_radius=None):
     """
     Calculate a troichoidal (bunch of little circles) toolpath
     for a given polygon with a tool radius and step.
@@ -310,8 +311,9 @@ def toolpath(polygon,
         **trimesh.path.exchange.misc.edges_to_path(
             medial_e, medial_v))
 
-    medial_radii = boundary_distance(polygon=polygon,
-                                     points=medial_v)
+    medial_radii = boundary_distance(
+        polygon=polygon,
+        points=medial_v)
 
     g = medial.vertex_graph
 
