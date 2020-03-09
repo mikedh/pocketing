@@ -12,7 +12,7 @@ import numpy as np
 import networkx as nx
 
 from scipy import spatial
-from shapely.geometry import Polygon
+from shapely.geometry import Polygon, MultiPoint
 
 
 def hash(polygon):
@@ -35,7 +35,8 @@ def hash(polygon):
 
 def boundary_distance(polygon, points):
     """
-    Find the distance between a polygon's boundary and an array of points.
+    Find the distance between a polygon's boundary and an
+    array of points.
 
     Parameters
     -------------
@@ -59,7 +60,8 @@ def boundary_distance(polygon, points):
     except BaseException:
         # in pure shapely we have to loop
         inverse = polygon.boundary
-        distance = np.array([inverse.distance(i) for i in MultiPoint(points)])
+        distance = np.array([
+            inverse.distance(i) for i in MultiPoint(points)])
 
     return distance
 
