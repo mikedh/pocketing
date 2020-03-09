@@ -118,3 +118,65 @@ def archimedian(
         (np.cos(theta), np.sin(theta))) * radii.reshape((-1, 1))
 
     return points
+
+
+def helix(radius, height, pitch, arc_res=None):
+    """
+    Create an approximate 3D helix using 3-point circular arcs.
+
+    Parameters
+    ------------
+    radius : float
+      Radius of helix
+    height : float
+      Overall height of helix
+    pitch : float
+      How far to advance in Z for every rotation
+    arc_res : None or float
+      Approximatly how many radians should returned arcs span
+
+    Returns
+    --------------
+    arcs : (n, 3, 3) float
+      Ordered list of 3D circular arcs
+    """
+    # set a default arc size if not passed
+    if arc_res is None:
+        arc_res = np.radians(25)
+
+    # total angle we're traversing
+    angle = (np.pi * 2.0 * height) / pitch
+
+    # how many arc sections will result, making sure to ceil
+    arc_count = int(np.ceil(angle / arc_res))
+
+    # given that arcs will share points how many
+    # points on the helix do we need
+    point_count = (2 * arc_count) + 1
+    # we're doing 3-point arcs
+    theta = np.linspace(0.0, angle, point_count)
+
+    # Z is linearly ramping for every point
+    z = np.linspace(0.0, height, len(theta))
+
+    # convert cylindrical to cartesian
+    cartesian = np.column_stack(
+        (np.cos(theta), np.sin(theta), z))
+    # multiply XY by radius
+    cartesian[:, :2] *= radius
+
+    # example of indexes for situation:
+    # arc_count = 3
+    # point_count = 7
+    # index = [[0,1,2],
+    #          [2,3,4],
+    #          [4,5,6]]
+
+    # use index wangling to generate that from counts
+    index = np.arange(point_count - 1).reshape((-1, 2))
+    index = np.column_stack((index, index[:, 1] + 1))
+
+    # now arcs are 3 cartesian points
+    arcs = cartesian[index]
+
+    return arcs

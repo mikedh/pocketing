@@ -1,13 +1,24 @@
 import os
 import trimesh
 import unittest
-
 import pocketing
+
+import numpy as np
 
 
 def get_model(file_name):
     """
     Load a model from the models directory by expanding paths out.
+
+    Parameters
+    ------------
+    file_name : str
+      Name of file in `models`
+
+    Returns
+    ------------
+    mesh : trimesh.Geometry
+      Trimesh object or similar
     """
     pwd = os.path.dirname(os.path.abspath(
         os.path.expanduser(__file__)))
@@ -44,6 +55,35 @@ class PocketTest(unittest.TestCase):
         # test generating a simple archimedian spiral
         spiral = pocketing.spiral.archimedian(0.5, 2.0, 0.125)
         assert trimesh.util.is_shape(spiral, (-1, 2))
+
+    def test_helix(self):
+        # check a 3D helix
+
+        # set values off a tool radius
+        tool_radius = 0.25
+        radius = tool_radius * 1.2
+        pitch = tool_radius * 0.3
+        height = 2.0
+
+        # create the helix
+        h = pocketing.spiral.helix(
+            radius=radius,
+            height=height,
+            pitch=pitch,)
+
+        # should be 3-point arcs
+        assert trimesh.util.is_shape(h, (-1, 3, 3))
+        # heights should start and end correctly
+        assert np.isclose(h[0][0][2], 0.0)
+        assert np.isclose(h[-1][-1][2], height)
+
+        # check the flattened 2D radius
+        radii = np.linalg.norm(h.reshape((-1, 3))[:, :2], axis=1)
+        assert np.allclose(radii, radius)
+
+        # make sure sequential arcs are sharing the same point
+        assert np.allclose(
+            h.reshape((-1, 6, 3))[:, 2:4, :].ptp(axis=1), 0.0)
 
 
 if __name__ == '__main__':
