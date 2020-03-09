@@ -39,5 +39,7 @@ setup(name='pocketing',
       packages=['pocketing'],
       install_requires=['numpy',
                         'scipy',
+                        'shapely',
+                        'networkx',
                         'trimesh'],
       )
