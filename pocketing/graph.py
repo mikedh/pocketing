@@ -63,9 +63,11 @@ def traverse_child_first(g, closest=None):
     -  get all sibling nodes (children of same parent)
     -- see which siblings haven't been visited
     -- for each unvisited sibling
-    ----- if sibling is a leaf, add it to the traversal and check the next sibling
-    ----- if sibling is not a leaf, find ONE leaf below it and move there
-    ------- you can pick any leaf below it, or use some distance metric
+    ----- if sibling is a leaf, add it to the traversal and
+          check the next sibling
+    ----- if sibling is not a leaf, find ONE leaf below it
+          and move there
+    ------- you can pick any leaf below it or use a distance metric
     -- if you have no unvisited siblings, move up to the parent
     -- once you reach the root node, stop
 

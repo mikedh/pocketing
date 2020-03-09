@@ -4,72 +4,16 @@ trochoidal.py
 
 Generate troichoidal toolpaths, or a bunch of tiny little circles.
 Generally used for high speed milling.
-
-
-
-# Trochoid Algorithm
-
-Parameters
----------------
-polygon : shapely.geometry.Polygon
-  Region to generate toolpath inside
-
-Returns
-------------
-
-start_position: (2,) float, position in space where cut section starts
-start_radius:   float,      radius inital position should be cleared out to
-path:           (n,2) float, cartesian path that represents a smooth trochoid- like curve
-                            that has the following properties:
-                            1) fully inside the input polygon
-                            2) starts and ends on the medial axis of the polygon
-                            3) has relatively uniform stepover between cycles of the trochoid
-                            4) terminates if the trochoids pass below a minimum radius
-
-
-Algorithm
----------------
-1) Compute the medial axis of the polygon
-
-2) Generate a traversal of the medial axis with DFS
-    a) Note when connections between non- connected nodes are made
-    b) For parts of the traversal along edges, add them to a 'slow' group
-    b) For jumps in the traversal, compute a shortest path connecting the jump, then:
-        i)  if the shortest path is below a threshold*, add this path to the 'slow group
-        ii) if the shortest path is above the threshold*, add it to the 'fast' group
-        *)  this threshold can be a fixed value, a fraction of the radius at the start or end point,
-                     or something else entirely
-
-3) For each section of the traversal with no jumps ('slow' group), compute the trochoid like curve:
-    a) Discretize the path section with linearly increasing path distances
-    b) compute the largest radius a circle at each point can be and still be contained by the polygon
-    c) find the subset of circles which have advancing fronts:
-                 circles centered at p1/p2 with radius r1/r2, step = |p2-p1| - r1 + r2
-    d) find the distance along the section of the path for each of the subset of circles
-    e) Fit a smoothed function (aka cubic spline) to the distances along the path
-    f) Sample the smoothed function for the new distances along the path
-    g) Take the distances, and convert them to XY positions
-    h) Find the new radius at each of the XY positions
-        i) Set theta equal to a linearly increasing value between
-           0.0 and (len(circle subset) * pi * 2.0)
-        j) Compute a trochoid with the XY positions, radii, and theta
-
-4) For each section of the traversal which represents a jump ('fast' group),
-   connect to the trochoid on both ends
-5) Calculate the 'chip loading', or material area removed per unit distance
-6) For regions of the traversal with no chip loading, shortcut the path
-7) Generate velocities as a function of chip loading
 """
 
-import time
 import trimesh
 import numpy as np
 import networkx as nx
 
 from .polygons import boundary_distance
 
-from shapely.geometry import LineString, Polygon, MultiPoint
-from trimesh.constants import log
+from shapely.geometry import LineString, Polygon
+
 from collections import deque
 from scipy.interpolate import UnivariateSpline, interp1d
 from scipy import spatial
@@ -118,8 +62,6 @@ def traversal(polygon, min_radius=.06):
     """
     resolution = np.diff(np.reshape(
         polygon.bounds, (2, 2)), axis=0).max() / 200.0
-    #from IPython import embed
-    # embed()
     medial_e, medial_v = trimesh.path.polygons.medial_axis(
         polygon,
         resolution=resolution)
@@ -128,7 +70,8 @@ def traversal(polygon, min_radius=.06):
         **trimesh.path.exchange.misc.edges_to_path(
             medial_e, medial_v))
 
-    medial_radii = boundary_distance(polygon=polygon, points=medial_v)
+    medial_radii = boundary_distance(
+        polygon=polygon, points=medial_v)
 
     g = medial.vertex_graph
 
@@ -159,19 +102,23 @@ def traversal(polygon, min_radius=.06):
 def advancing_front(path, polygon, step):
     """
     Find the distances along a path that result in an set of circles
-    that are inscribed to a specified polygon and that have an advancing
-    front spaced with a specified step apart.
+    that are inscribed to a specified polygon and that have an
+    advancing front spaced with a specified step apart.
 
     Arguments
     -----------
-    path:    (n,2) float, 2D path inside a polygon
-    polygon: shapely.geometry.Polygon object which contains all of path
-    step:    float, how far apart should the advancing fronts of the circles be
+    path : (n, 2) float
+      2D path inside a polygon
+    polygon : shapely.geometry.Polygon
+      Object which contains all of path
+    step : float
+      How far apart should the advancing fronts of the circles be
 
     Returns
     -----------
-    distance_result: (m) float, distances along curve which result in
-                      nicely spaced circles.
+    distance_result : (m) float
+      Distances along curve which result in
+      nicely spaced circles.
     """
     path = np.asanyarray(path)
     assert trimesh.util.is_shape(path, (-1, 2))
@@ -206,21 +153,28 @@ def swept_trochoid(path,
                    step,
                    counts_per_rotation=360):
     """
-    Generate a swept trochoid along a path with the following properties:
-        1) contained inside polygon
-        2) fronts of trochoid are separated by step distance
-        3) divided into approximatly counts_per_rotation for each rotation
+    Generate a swept trochoid along a path with the following
+    properties:
+      1) contained inside polygon
+      2) fronts of trochoid are separated by step distance
+      3) divided into approximatly counts_per_rotation
+         for each rotation
 
-    Arguments
-    ----------
-    path:                (n,2) float, path in 2D to generate trochoid along
-    polygon:             shapely.geometry.Polygon object that will contain result
-    step:                float, distance between subsequent rotations of the trochoid
-    counts_per_rotation: int, segments in a rotation of the trochoid
+    Parameters
+    -------------
+    path : (n, 2) float
+      Path in 2D to generate trochoid along
+    polygon : shapely.geometry.Polygon
+      Object that will contain result
+    step : float
+      Distance between subsequent rotations of the trochoid
+    counts_per_rotation : int
+      Segments in a rotation of the trochoid
 
     Returns
     ----------
-    curve: (n,2) path
+    curve : (n, 2) path
+      Toolpath
     """
 
     path = np.asanyarray(path)
@@ -261,37 +215,34 @@ def swept_trochoid(path,
                             np.pi * 2 * len(distances) + np.pi * 2,
                             len(new_distance))
 
-    new_radius = boundary_distance(polygon=polygon, points=new_offset)
-
-    #from IPython import embed
-    # embed()
+    # find the distance from every point to the polygon boundary
+    new_radius = boundary_distance(
+        polygon=polygon, points=new_offset)
 
     # calculate the actual trochoid
     curve = trochoid(theta=new_theta,
                      radius=new_radius,
                      offset=new_offset)
 
-    # find the indexes where curve intersects the input path
-    #hits = intersection_index(curve, path)
-    # so that the result both starts and ends on the input path
-    # truncate the resulting trochoid to the minimum and maximum intersection
-    ##############curve = curve[hits.min()+1:hits.max()]
-
     return curve
 
 
 def query_nearest(points_original, points_query):
     """
-    Find the nearest point from an original set for each of a query set.
+    Find the nearest point from an original set for each of a
+    query set.
 
     Arguments
     -----------
-    points_original: (n,d) float, points in space
-    points_query:    (m,d) float, points in space
+    points_original : (n, d) float
+      Points in space
+    points_query : (m, d) float
+      Points in space
 
     Returns
     -----------
-    index: (m,) int, index of closest points_original for each points_query
+    index : (m,) int
+      Index of closest points_original for each points_query
     """
     tree = spatial.cKDTree(points_original)
     distance, index = tree.query(points_query, k=1)
@@ -300,18 +251,23 @@ def query_nearest(points_original, points_query):
 
 def intersection_index(curve_a, curve_b):
     """
-    Find the indexes on the first curve of where two curves intersect.
+    Find the indexes on the first curve of where two curves
+    intersect.
 
     Arguments
-    ----------
-    curve_a: (n,2) float, curve on a plane
-    curve_b: (m,2) float, curve on a plane
+    ------------
+    curve_a : (n, 2) float
+      Curve on a plane
+    curve_b : (m, 2) float
+      Curve on a plane
 
     Returns
     ----------
-    indexes: (p) int, indexes of curve_a where it intersects curve_b
+    indexes : (p) int
+      Indexes of curve_a where it intersects curve_b
     """
-    hits = np.array(LineString(curve_a).intersection(LineString(curve_b)))
+    hits = np.array(LineString(curve_a).intersection(
+        LineString(curve_b)))
     indexes = np.hstack(query_nearest(curve_a, hits))
 
     return indexes
@@ -337,7 +293,6 @@ def toolpath(polygon,
     ---------------
     paths : sequence of (n, 2) float
       Cutting tool paths
-
     """
 
     # if not specified set to fraction of stepover

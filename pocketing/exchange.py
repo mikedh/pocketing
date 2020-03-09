@@ -5,6 +5,8 @@ exchange.py
 Format toolpaths as JSON or G-Code (eventually)
 """
 
+import json
+
 
 def to_json(paths, radius, **kwargs):
     """
