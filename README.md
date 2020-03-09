@@ -1,7 +1,11 @@
 # pypocketing: ALPHA
 
-![Test And Publish](https://github.com/mikedh/pocketing/workflows/Test%20And%20Publish/badge.svg) [![PyPI version](https://badge.fury.io/py/pocketing.svg)](https://badge.fury.io/py/pocketing)
+[![Test And Publish](https://github.com/mikedh/pocketing/workflows/Test%20And%20Publish/badge.svg)](https://github.com/mikedh/pocketing/actions?query=workflow%3A%22Test+And+Publish%22) [![PyPI version](https://badge.fury.io/py/pocketing.svg)](https://pypi.org/project/pocketing/)
 ----------------------
+
+
+
+
 
 ![ScreenShot](https://raw.github.com/mikedh/pypocketing/master/docs/contour_troch.png)
 

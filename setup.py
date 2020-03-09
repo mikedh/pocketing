@@ -5,7 +5,8 @@ from setuptools import setup
 
 # load __version__
 version_file = 'pocketing/version.py'
-exec(open(version_file).read())
+# use eval to convert string
+__version__ = eval(open(version_file).read().split('=')[-1])
 
 # load README.md as long_description
 long_description = ''
