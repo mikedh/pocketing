@@ -49,7 +49,6 @@ def offset(polygon, step):
         # get the polygons we're looking at
         a = offset[nodes[i]]
         b = offset[nodes[i + 1]]
-
         # create the spiral section between a and b
         curve = polygons.interpolate(a, b, start=start)
         # make sure the next section starts where this
@@ -69,16 +68,16 @@ def offset(polygon, step):
     return path
 
 
-def archimedian(
+def archimedean(
         radius_start,
         radius_end,
         step,
         angular_resolution=None):
     """
-    Construct an analytically evaluated Archimedian Spiral
+    Construct an analytically evaluated Archimedean Spiral
     from radius and per-revolution step.
 
-    The equation of an Archimedian Spiral is:
+    The equation of an Archimedean Spiral is:
       r = K * theta
 
     Parameters
@@ -95,7 +94,7 @@ def archimedian(
     Returns
     ------------
     points : (n, 2) float
-      Points representing an Archimedian Spiral
+      Points representing an Archimedean Spiral
     """
     # the spiral constant
     # evaluated from: step = K * 2 * pi
@@ -133,7 +132,7 @@ def helix(radius, height, pitch, arc_res=None):
     pitch : float
       How far to advance in Z for every rotation
     arc_res : None or float
-      Approximatly how many radians should returned arcs span
+      Approximately how many radians should returned arcs span
 
     Returns
     --------------

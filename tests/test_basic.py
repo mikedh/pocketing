@@ -52,8 +52,8 @@ class PocketTest(unittest.TestCase):
         assert trimesh.util.is_shape(toolpath, (-1, 2))
 
     def test_archimedian(self):
-        # test generating a simple archimedian spiral
-        spiral = pocketing.spiral.archimedian(0.5, 2.0, 0.125)
+        # test generating a simple archimedean spiral
+        spiral = pocketing.spiral.archimedean(0.5, 2.0, 0.125)
         assert trimesh.util.is_shape(spiral, (-1, 2))
 
     def test_helix(self):

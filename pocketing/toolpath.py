@@ -59,7 +59,7 @@ def simplify_inside(path, polygon, max_distance=.1):
 def check_path(polygon, path, radius, resolution=.01):
     """
     Check a circle being swept along a path, which is contained in a polygon.
-    Caluclate the removal rate, and check that it stays within the bounds
+    Calculate the removal rate, and check that it stays within the bounds
     throughout the traversal.
 
     Arguments

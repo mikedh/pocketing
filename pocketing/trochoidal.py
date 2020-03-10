@@ -21,11 +21,11 @@ from scipy import spatial
 
 def trochoid(offset, theta, radius):
     """
-    Produce a raw unfiltered trochoid
+    Produce a raw unfiltered trochoid.
 
     Parameters
     ------------
-    offset : (n,2) float
+    offset : (n, 2) float
         Cartesian offset for each position
     theta : (n,) float
         Angle in radians for each step
@@ -34,7 +34,7 @@ def trochoid(offset, theta, radius):
 
     Returns
     -----------
-    troch : (m,2) float
+    troch : (m, 2) float
         Trochoidal path
     """
     x = offset[:, 0] + radius * np.cos(theta)
@@ -157,7 +157,7 @@ def swept_trochoid(path,
     properties:
       1) contained inside polygon
       2) fronts of trochoid are separated by step distance
-      3) divided into approximatly counts_per_rotation
+      3) divided into approximately counts_per_rotation
          for each rotation
 
     Parameters

@@ -28,6 +28,7 @@ jobs:
         autopep8 --recursive --aggressive --diff --exit-code tests/
 
   tests:
+    needs: formatting
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:

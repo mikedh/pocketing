@@ -16,7 +16,7 @@ from scipy import spatial
 
 def traverse_child_first(g, closest=None):
     """
-    Traverse a tree, with the rule that a node can only be visted
+    Traverse a tree, with the rule that a node can only be visited
     once all of its children are visited.
 
     Useful for linking toolpaths.

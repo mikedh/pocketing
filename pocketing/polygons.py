@@ -183,9 +183,12 @@ def interpolate(a, b, start=None, step=.005):
     """
 
     # resample the first polygon so every sample is spaced evenly
-    ra = trimesh.path.traversal.resample_path(a.exterior,
-                                              step=step)
+    ra = trimesh.path.traversal.resample_path(
+        a.exterior, step=step)
+    if not a.exterior.is_ccw:
+        ra = ra[::-1]
 
+    assert trimesh.path.util.is_ccw(ra)
     if start is not None:
         # find the closest index on polygon 'a'
         # by creating a KDTree
@@ -196,6 +199,9 @@ def interpolate(a, b, start=None, step=.005):
     # resample the second polygon for even spacing
     rb = trimesh.path.traversal.resample_path(b.exterior,
                                               step=step)
+    if not b.exterior.is_ccw:
+        rb = rb[::-1]
+
     # we want points on 'b' that correspond index- wise
     # the resampled points on 'a'
     tree_b = spatial.cKDTree(rb)
