@@ -54,7 +54,7 @@ class PocketTest(unittest.TestCase):
     def test_archimedian(self):
         # test generating a simple archimedean spiral
         spiral = pocketing.spiral.archimedean(0.5, 2.0, 0.125)
-        assert trimesh.util.is_shape(spiral, (-1, 2))
+        assert trimesh.util.is_shape(spiral, (-1, 3, 2))
 
     def test_helix(self):
         # check a 3D helix
@@ -72,7 +72,8 @@ class PocketTest(unittest.TestCase):
             pitch=pitch,)
 
         # should be 3-point arcs
-        assert trimesh.util.is_shape(h, (-1, 3, 3))
+        check_arcs(h)
+
         # heights should start and end correctly
         assert np.isclose(h[0][0][2], 0.0)
         assert np.isclose(h[-1][-1][2], height)
@@ -81,9 +82,13 @@ class PocketTest(unittest.TestCase):
         radii = np.linalg.norm(h.reshape((-1, 3))[:, :2], axis=1)
         assert np.allclose(radii, radius)
 
-        # make sure sequential arcs are sharing the same point
-        assert np.allclose(
-            h.reshape((-1, 6, 3))[:, 2:4, :].ptp(axis=1), 0.0)
+
+def check_arcs(arcs):
+    # arcs should be 2D or 2D 3-point arcs
+    assert trimesh.util.is_shape(arcs, (-1, 3, (3, 2)))
+    # make sure arcs start where previous arc begins
+    for a, b in zip(arcs[:-1], arcs[1:]):
+        assert np.allclose(a[2], b[0])
 
 
 if __name__ == '__main__':

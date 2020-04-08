@@ -276,6 +276,9 @@ def intersection_index(curve_a, curve_b):
 def toolpath(
         polygon,
         step,
+        start_point=None,
+        start_radius=None,
+        medial=None,
         min_radius=None):
     """
     Calculate a troichoidal (bunch of little circles) toolpath
@@ -304,25 +307,29 @@ def toolpath(
     resolution = np.diff(np.reshape(polygon.bounds,
                                     (2, 2)), axis=0).max() / 500.0
     # the skeleton of a region
-    medial_e, medial_v = trimesh.path.polygons.medial_axis(
-        polygon,
-        resolution=resolution)
-    medial = trimesh.path.Path2D(
-        **trimesh.path.exchange.misc.edges_to_path(
-            medial_e, medial_v))
+    if medial is None:
+        medial = trimesh.path.Path2D(
+            **trimesh.path.exchange.misc.edges_to_path(
+                *trimesh.path.polygons.medial_axis(
+                    polygon,
+                    resolution=resolution)))
 
     medial_radii = boundary_distance(
         polygon=polygon,
-        points=medial_v)
+        points=medial.vertices)
 
     g = medial.vertex_graph
 
     bad = np.nonzero(medial_radii < min_radius)[0]
     g.remove_nodes_from(bad)
 
-    # start from the medial vertex closest to the centroid
-    start = query_nearest(medial.vertices,
-                          polygon.centroid.coords)[0]
+    if start_point is None:
+        # just use the index with the largest radius
+        start = medial_radii.argmax()
+    else:
+        # start from the vertex closest to the passed point
+        start = query_nearest(
+            medial.vertices, start_point)
     current = deque([start])
 
     slow = deque()
