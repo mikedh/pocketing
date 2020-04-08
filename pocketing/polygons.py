@@ -38,6 +38,8 @@ def boundary_distance(polygon, points):
     Find the distance between a polygon's boundary and an
     array of points.
 
+    Uses either `shapely` or `pygeos` (5-10x faster) as a backend.
+
     Parameters
     -------------
     polygon : shapely.geometry.Polygon

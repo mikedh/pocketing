@@ -39,7 +39,5 @@ setup(name='pocketing',
                         'scipy',
                         'rtree',
                         'shapely',
-                        'pygeos',
                         'networkx',
-                        'trimesh']
-      )
+                        'trimesh'])
