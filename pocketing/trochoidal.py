@@ -298,14 +298,17 @@ def toolpath(
     paths : sequence of (n, 2) float
       Cutting tool paths
     """
+    if polygon is None or polygon.area < 1e-3:
+        return None
 
     # if not specified set to fraction of stepover
     if min_radius is None:
         min_radius = step / 2.0
 
     # resolution for medial axis calculation
-    resolution = np.diff(np.reshape(polygon.bounds,
-                                    (2, 2)), axis=0).max() / 500.0
+    resolution = np.diff(
+        np.reshape(polygon.bounds,
+                   (2, 2)), axis=0).max() / 500.0
     # the skeleton of a region
     if medial is None:
         medial = trimesh.path.Path2D(

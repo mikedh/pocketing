@@ -38,7 +38,8 @@ def boundary_distance(polygon, points):
     Find the distance between a polygon's boundary and an
     array of points.
 
-    Uses either `shapely` or `pygeos` (5-10x faster) as a backend.
+    Uses either `shapely` or `pygeos` (5-10x faster)
+    as a backend.
 
     Parameters
     -------------
@@ -217,3 +218,56 @@ def interpolate(a, b, start=None, step=.005):
     points = (ra * (1.0 - weights)) + (pb * weights)
 
     return points
+
+
+def cuttable(polygon, radius, constraint=None, debug=False):
+    """
+    Given a polygon to cut, a stay-out region polygon, and
+    a radius, return a modified version of the original polygon
+    that stays free of the constraint region and tries to round
+    to the requested radius.
+
+    Parameters
+    -------------
+    polygon : shapely.geometry.Polygon
+      Polygon region to cut
+    radius : float
+      Radius to round by
+    constraint : None or shapely.geometry.Polygon
+      Region to stay clear of
+    debug : bool
+      If True, display additional information
+
+    Returns
+    ---------------
+    cuttable : shapely.geometry.Polygon
+      Modified version of original polygon
+    """
+
+    # a convex exterior version of the polygon that maintains interiors
+    convex = Polygon(shell=polygon.convex_hull.exterior,
+                     holes=polygon.interiors)
+    # if no stay-out region just return the convex-exterior polygon
+    if constraint is None:
+        return convex
+
+    # check to see if the convex exterior polygon hits anything
+    if constraint.intersects(convex.buffer(-.001)):
+        current = polygon
+    else:
+        current = convex
+
+    # this will essentially "constrained buffer" the polygon to stay
+    # clear of the constraint polygon while rounding corners nicely
+    line = current.exterior.difference(constraint.buffer(radius))
+    result = line.buffer(radius).union(current)
+
+    if debug:
+        # plot the resulting buffered polygon
+        pp(result, show=False)
+        viz = trimesh.load_path(polygon)
+        viz.apply_translation([-viz.extents[0] * 1.2, 0])
+        # plot the source polygon translated left
+        viz.show()
+
+    return result
