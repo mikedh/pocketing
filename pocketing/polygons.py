@@ -263,8 +263,6 @@ def cuttable(polygon, radius, constraint=None, debug=False):
     result = line.buffer(radius).union(current)
 
     if debug:
-        # plot the resulting buffered polygon
-        pp(result, show=False)
         viz = trimesh.load_path(polygon)
         viz.apply_translation([-viz.extents[0] * 1.2, 0])
         # plot the source polygon translated left

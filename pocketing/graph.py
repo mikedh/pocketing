@@ -82,11 +82,11 @@ def traverse_child_first(g, closest=None):
     # for each node remember names of all leaf nodes below it
     for n in g.nodes():
         g.nodes[n]['leaves'] = []
-    for l in leaves:
-        for n in nx.shortest_path(g, root, l):
-            if n == l:
+    for leaf in leaves:
+        for n in nx.shortest_path(g, root, leaf):
+            if n == leaf:
                 continue
-            g.nodes[n]['leaves'].append(l)
+            g.nodes[n]['leaves'].append(leaf)
 
     # start the traversal at an arbitrary node
     traversal = collections.deque([leaves[0]])

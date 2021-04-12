@@ -1,8 +1,6 @@
 import trimesh
 import numpy as np
 
-from shapely.geometry import LineString
-
 
 def cover(polygon, step):
     """
@@ -88,4 +86,3 @@ def create(bounds, step):
         result = np.column_stack((x, y))
 
     return result
-
