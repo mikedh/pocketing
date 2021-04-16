@@ -193,12 +193,11 @@ def archimedean(
             assert np.allclose(a[2], b[0])
 
     if point_start is not None:
-        a, b = (point_start[:2] - center[:2]) / radius_start
-        aa = np.arccos(np.clip(a, -1, 1))
-        ba = np.arcsin(np.clip(b, -1, 1))
-        atol = 1e-3
-        assert np.isclose(aa, angle_start, atol=atol)
-        assert np.isclose(ba, angle_start, atol=atol)
+        a, b = np.clip(
+            (point_start[:2] - center[:2]) / radius_start,
+            -1.0, 1.0)
+        assert np.isclose(a, np.cos(angle_start), atol=1e-3)
+        assert np.isclose(b, np.sin(angle_start), atol=1e-3)
 
     return arcs
 
@@ -271,12 +270,15 @@ def helix(radius,
         # return the final angle
         helix_end = theta[-1] % (np.pi * 2)
 
+        vec = arcs[-1][-1][:2] - center[:2]
+        # norm of arc should be close to radius
+        assert np.isclose(np.linalg.norm(vec), radius, rtol=1e-3)
         # check to make sure the angle is accurate
-        a, b = (arcs[-1][-1][:2] - center[:2]) / radius
-        aa = np.arccos(np.clip(a, -1, 1))
-        ba = np.arcsin(np.clip(b, -1, 1))
-        assert np.isclose(aa, helix_end, atol=1e-3)
-        assert np.isclose(ba, helix_end, atol=1e-3)
+        a, b = np.clip(vec / radius, -1.0, 1.0)
+        ac, bc = np.cos(helix_end), np.sin(helix_end)
+
+        assert np.isclose(a, ac, atol=1e-3)
+        assert np.isclose(b, bc, atol=1e-3)
 
         return arcs, helix_end
 

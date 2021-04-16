@@ -16,8 +16,8 @@ from scipy import spatial
 
 def traverse_child_first(g, closest=None):
     """
-    Traverse a tree, with the rule that a node can only be visited
-    once all of its children are visited.
+    Traverse a tree with the rule that a node can only be
+    visited once all of its children are visited.
 
     Useful for linking toolpaths.
 
@@ -193,3 +193,52 @@ def is_1D_graph(g):
 
     # made it through all checks
     return True
+
+
+def dfs(g, start):
+    """
+    Run depth-first graph exploration but connect sections
+    such that result is a flat list of connected nodes.
+
+    Parameters
+    -------------
+    g : networkx.Graph
+      Graph to traverse
+    start : any
+      Node in g to start traversal at.
+
+    Returns
+    ---------
+    flat : (len(g.nodes),)
+      Ordered traversal of g.
+    """
+    # get numpy array of dfs traversal
+    edges = np.array(list(nx.dfs_edges(g, start)))
+    infl = np.nonzero(edges[:, 0][1:] != edges[:, 1][:-1])[0]
+    chunks = np.array_split(edges, infl + 1)
+    assert np.allclose(np.vstack(chunks), edges)
+
+    # now split into disconnected chunks
+    paths = [np.append(i[:, 0], i[-1][1])
+             for i in chunks]
+
+    # paths should be reversable back to identical edges
+    assert (edges == np.vstack([trimesh.util.stack_lines(i)
+                                for i in paths])).all()
+
+    # generate shortest paths between disconnected sections
+    connect = [nx.shortest_path(g, a[-1], b[0])
+               for a, b in zip(paths[:-1], paths[1:])]
+
+    # put both connectors and paths into one array
+    result = [[]] * (len(paths) + len(connect))
+    # every other value is a path
+    result[0::2] = paths
+    # every other other value is a connection
+    result[1::2] = connect
+    flat = np.hstack(result)
+
+    # we should include every edge
+    assert set(flat) == set(edges.ravel())
+
+    return flat
