@@ -3,6 +3,7 @@
 from .version import __version__
 
 from . import grid
+from . import spline
 from . import spiral
 from . import contour
 from . import polygons
