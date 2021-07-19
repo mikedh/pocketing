@@ -14,13 +14,13 @@ import numpy as np
 from .polygons import boundary_distance
 from shapely.geometry import LineString, Polygon, Point
 
-
 from scipy.spatial import cKDTree
 from scipy.interpolate import UnivariateSpline, interp1d
 
+import matplotlib.pyplot as plt
+    
 from . import graph
 from . import spline
-import matplotlib.pyplot as plt
 
 
 def constrained_spiral(a, b, r, counts=200, kind=None):
@@ -170,6 +170,7 @@ def swept_trochoid(path,
                    polygon,
                    step,
                    smooth_factor=2,
+                   direction=None,
                    counts=200):
     """
     Generate a swept trochoid along a path with the following
@@ -211,10 +212,10 @@ def swept_trochoid(path,
 
     on_path = sampler.sample(distances)
 
+    origin = on_path[0]
     control = []
 
     for a, b in zip(on_path[:-1], on_path[1:]):
-
         # linearly interpolate between start and end points
         # rather than exactly follow the path between points
         samples = np.linspace(
@@ -226,17 +227,22 @@ def swept_trochoid(path,
         radii = boundary_distance(
             polygon=polygon, points=samples)
 
+        debug = False
+        if debug:
+            plt.plot(*Point(a).buffer(radii[0]).exterior.xy,
+                     linestyle='dashed', color='g')
+            plt.plot(*Point(b).buffer(radii[-1]).exterior.xy,
+                     linestyle='dashed', color='g')
         troch = spline.section(points=np.array(
-            [a, b]), radius=radii[-1], debug=False)
+            [a, b]), radius=radii[-1], debug=debug)
 
-        plt.plot(*Point(a).buffer(radii[0]).exterior.xy,
-                 linestyle='dashed', color='g')
-        plt.plot(*Point(b).buffer(radii[-1]).exterior.xy,
-                 linestyle='dashed', color='g')
+        direc = np.linalg.norm(np.array([a, b]) - origin, axis=1)
+        sgn = (direc.argmax() * 2) - 1
+        #from IPython import embed
+        #embed()
+        control.append(spline.discretize_bezier(troch)[::sgn])
 
-        # troch  constrained_spiral(a, b, r=radii.min())
-
-        control.append(spline.discretize_bezier(troch))
+        #break
 
     plt.plot(*np.vstack(control).T)
     trimesh.path.polygons.plot(polygon)
@@ -353,10 +359,11 @@ def toolpath(polygon,
 
     # a flat traversal which visits every node
     # and where every consecutive value is an edge
-    order = graph.dfs(g, start=start)
+    order, direction = graph.dfs(g, start=start)
     # area where we're cutting
     cut = swept_trochoid(
         path=medial.vertices[order],
+        direction=direction,
         polygon=polygon,
         step=step)
 

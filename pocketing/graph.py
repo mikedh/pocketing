@@ -232,13 +232,22 @@ def dfs(g, start):
 
     # put both connectors and paths into one array
     result = [[]] * (len(paths) + len(connect))
+    direction = [[]] * (len(paths) + len(connect))
+
     # every other value is a path
     result[0::2] = paths
+    direction[0::2] = [np.ones(len(i), dtype=np.int64)
+                       for i in paths]
+
     # every other other value is a connection
     result[1::2] = connect
+    direction[1::2] = [-np.ones(len(i), dtype=np.int64)
+                       for i in connect]
+
     flat = np.hstack(result)
+    flat_dir = np.hstack(direction)
 
     # we should include every edge
     assert set(flat) == set(edges.ravel())
 
-    return flat
+    return flat, flat_dir

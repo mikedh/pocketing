@@ -18,33 +18,32 @@ def gold_to_control(file_name):
     m = trimesh.load(file_name)
     m.vertices[:, 1] *= -1.0
 
-    pt = m.vertices[[m.entities[0].points[0],
-                     m.entities[-1].points[-1]]]
+    assert all(isinstance(e, trimesh.path.entities.Bezier)
+               for e in m.entities)
+    pt = np.array([e.points for e in m.entities])
+    assert pt.shape[1] == 4
 
-    assert np.isclose(*pt[:, 0])
+    p = np.append(np.hstack(pt[:, :3]), pt[-1][-1])
 
-    a = m.vertices[m.entities[0].points[0]]
-    m.apply_translation(-a)
+    v = m.vertices[p]
+    v -= v[0]
+    v[-1][0] = 0
 
-    ai = m.entities[0].points[0]
-    bi = m.entities[-1].points[-1]
-    a = m.vertices[ai]
-    b = m.vertices[bi]
-
-    # we're just at radius
-    r = (m.bounds[1] - b)[1]
-
-    import networkx as nx
-    p = nx.shortest_path(m.vertex_graph, ai, bi)
-
-    return m.vertices[p]
+    return v
 
 
-control = gold_to_control(get_path('gold.svg'))
+control = gold_to_control(get_path('dee.svg'))
+
+
+def discretize_multibezier(control):
+    a = np.arange(len(control) - 1).reshape((-1, 3))
+    b = np.hstack((a, a[:, 2:] + 1))
+    return np.vstack([discretize_bezier(i) for i in control[b]])
 
 
 def section(radius,
-            points, debug=False):
+            points,
+            debug=False):
     """
     Produce the control points for a cut section that
     starts and ends at specified points.
@@ -62,13 +61,13 @@ def section(radius,
       Control points for a bezier curve.
     """
 
-    angle_start = 0.08726646259971647
-    angle_end = 2.6179938779914944
+    angle_start = 0.08
+    angle_end = 2
 
     assert points.shape == (2, 2)
     f_vector = points[1] - points[0]
     length = np.linalg.norm(f_vector)
-    discrete = discretize_bezier(control)
+    discrete = discretize_multibezier(control)
 
     # angle of control points
     ang = np.arctan2(*(control - control[-1]).T[::-1])
@@ -87,8 +86,8 @@ def section(radius,
 
     scaling = radius / (1.001 * discrete[:, 0].max())
     c_new = control.copy() * scaling
-    c_new[ang_ok] = (control[ang_ok] - control[-1]) * \
-        (radius / rad_dis).reshape((-1, 1)) + c_new[-1]
+    # c_new[ang_ok] = (control[ang_ok] - control[-1]) * \
+    #    (radius / rad_dis).reshape((-1, 1)) + c_new[-1]
 
     Y = c_new[:, 1]
     length_current = Y[-1]
@@ -96,10 +95,11 @@ def section(radius,
 
     # we are scaling anything behind end point
     index = Y < length_current  # (length_current - radius/3)
+    index = Y < length_current - radius / 4.0
 
     # scale control points behind circle-following
-    scaling = (length_current - Y[index]) / length_current
-    c_new[:, 1][index] += scaling * move
+    stretch = (length_current - Y[index]) / length_current
+    c_new[:, 1][index] += stretch * move
     c_new[:, 1] -= move
 
     assert np.allclose(c_new[0], 0.0)
@@ -122,8 +122,12 @@ def section(radius,
         plt.plot(*LineString(points).buffer(radius).exterior.xy,
                  linestyle='dashed', color='k')
         plt.scatter(*points.T)
-        plt.plot(*discretize_bezier(c_final).T, color='b')
+        plt.scatter(*c_final.T, color='r')
+        plt.plot(*discretize_multibezier(c_final).T, color='b')
         plt.show()
+
+        #from IPython import embed
+        # embed()
 
     return c_final
 
@@ -145,40 +149,3 @@ if __name__ == '__main__':
             points=np.arange(len(cnt)))],
         vertices=cnt,
         process=False)
-
-    """
-    epsilon = 1e-3
-
-    #X, Y = #m.vertices.T
-    X, Y = cnt.T
-    length_current = Y[-1]
-    move = length_current - length
-
-    # we are scaling anything behind end point
-    index = Y < length_current #(length_current - radius/3)
-
-    # scale control points behind circle-following
-    scaling = (length_current - Y[index]) / length_current
-    m.vertices[:,1][index] += scaling * move
-    m.vertices[:,1] -= move
-
-    #m.vertices[:,0][index] -= X[index] * (scaling / radius)
-    # now scale X
-    # the further out X is the more we want it to move
-    #discrete = m.entities[0].discrete(m.vertices)
-    #X[X>0] *= radius / discrete[:,0].max()
-    #m.vertices[:,0] = X
-
-    m._cache.clear()
-
-    assert np.allclose(m.vertices[0], 0.0)
-    assert np.allclose(m.vertices[-1], [0.0, length])
-
-    plt.plot(*Point([0,length]).buffer(radius).exterior.xy,
-             linestyle='dashed')
-
-    plt.scatter(*m.vertices.T)
-
-    m.show()
-
-    """
